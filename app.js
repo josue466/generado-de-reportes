@@ -2,7 +2,6 @@ let data = [];
 let headers = [];
 let dataTypes = {};
 
-// Configuración de carga de archivos
 const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
 
@@ -10,6 +9,31 @@ uploadArea.addEventListener('click', () => fileInput.click());
 uploadArea.addEventListener('dragover', handleDragOver);
 uploadArea.addEventListener('drop', handleDrop);
 fileInput.addEventListener('change', handleFileSelect);
+
+
+function isMissing(value) {
+
+    if (value === null || value === undefined) return true;
+    
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim().toLowerCase();
+        if (trimmed === '') return true;
+        
+
+        const missingStrings = [
+            'nan', 'na', 'n/a', 'null', 'none', 'nil', '#n/a', '#na', '#null',
+            '#div/0!', '#value!', 'missing', 'unknown', '?', '-', '--', '...',
+            'not available', 'not applicable', 'empty'
+        ];
+        if (missingStrings.includes(trimmed)) return true;
+    }
+    
+
+    if (typeof value === 'number' && (isNaN(value) || !isFinite(value))) return true;
+    
+    return false;
+}
 
 function handleDragOver(e) {
     e.preventDefault();
@@ -118,7 +142,7 @@ function finishProcessing() {
 function analyzeDataTypes() {
     dataTypes = {};
     headers.forEach(header => {
-        const values = data.map(row => row[header]).filter(val => val !== null && val !== undefined && val !== '');
+        const values = data.map(row => row[header]).filter(val => !isMissing(val));
         
         if (values.length === 0) {
             dataTypes[header] = 'unknown';
@@ -155,7 +179,7 @@ function generateOverview() {
     const missingByVar = {};
     
     headers.forEach(header => {
-        const missing = data.filter(row => row[header] === null || row[header] === undefined || row[header] === '').length;
+        const missing = data.filter(row => isMissing(row[header])).length;
         missingByVar[header] = missing;
         totalMissing += missing;
         totalCells += data.length;
@@ -263,7 +287,7 @@ function analyzeVariable() {
         return;
     }
     
-    const values = data.map(row => row[selectedVar]).filter(val => val !== null && val !== undefined && val !== '');
+    const values = data.map(row => row[selectedVar]).filter(val => !isMissing(val));
     const type = dataTypes[selectedVar];
     const missing = data.length - values.length;
     const missingPercentage = ((missing / data.length) * 100).toFixed(1);
@@ -441,7 +465,7 @@ function createTable(samples) {
         html += '<tr>';
         headers.forEach(header => {
             const value = row[header];
-            html += `<td>${value !== null && value !== undefined ? value : ''}</td>`;
+            html += `<td>${isMissing(value) ? '<span style="color: #999; font-style: italic;">Missing</span>' : value}</td>`;
         });
         html += '</tr>';
     });
@@ -481,8 +505,7 @@ function calculateFrequency(values) {
 
 function calculateCorrelation(varX, varY) {
     const validData = data.filter(row => 
-        row[varX] !== null && row[varX] !== undefined && row[varX] !== '' &&
-        row[varY] !== null && row[varY] !== undefined && row[varY] !== ''
+        !isMissing(row[varX]) && !isMissing(row[varY])
     );
     
     const xValues = validData.map(row => parseFloat(row[varX])).filter(v => !isNaN(v));
@@ -634,8 +657,7 @@ function createBarChart(ctx, topFreq) {
 
 function createRelationChart(ctx, varX, varY, typeX, typeY) {
     const validData = data.filter(row => 
-        row[varX] !== null && row[varX] !== undefined && row[varX] !== '' &&
-        row[varY] !== null && row[varY] !== undefined && row[varY] !== ''
+        !isMissing(row[varX]) && !isMissing(row[varY])
     );
     
     if (typeX === 'numeric' && typeY === 'numeric') {
@@ -816,45 +838,45 @@ function createRelationChart(ctx, varX, varY, typeX, typeY) {
 }
 
 function showSection(sectionName) {
-    // Ocultar todas las secciones
+
     document.querySelectorAll('.content').forEach(content => {
         content.classList.remove('active');
     });
     
-    // Remover clase active de todos los botones
+
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('active');
     });
     
-    // Mostrar la sección seleccionada
+
     document.getElementById(sectionName + 'Content').classList.add('active');
     
-    // Activar el botón correspondiente
+
     event.target.classList.add('active');
 }
 
 function resetApp() {
-    // Limpiar datos
+
     data = [];
     headers = [];
     dataTypes = {};
     
-    // Mostrar sección de carga
+
     document.getElementById('uploadSection').style.display = 'block';
     document.getElementById('navigation').style.display = 'none';
     
-    // Limpiar input de archivo
+
     document.getElementById('fileInput').value = '';
     document.getElementById('fileInfo').innerHTML = '';
     
-    // Limpiar contenido
+
     document.getElementById('statsGrid').innerHTML = '';
     document.getElementById('variableAnalysis').innerHTML = '';
     document.getElementById('relationAnalysis').innerHTML = '';
     document.getElementById('firstSamples').innerHTML = '';
     document.getElementById('lastSamples').innerHTML = '';
     
-    // Resetear selectores
+ 
     ['variableSelect', 'varX', 'varY'].forEach(id => {
         document.getElementById(id).innerHTML = '<option value="">-- Seleccionar --</option>';
     });
